@@ -1,0 +1,959 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#f2f5f9">
+  <title>Кредитный калькулятор без догадок - Заплатка</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --accent: #007aff;
+      --ink: #0b1220;
+      --muted: #657083;
+      --page: #f2f5f9;
+      --surface: #fbfcfe;
+      --line: rgba(15, 23, 42, .08);
+      --shadow: 0 16px 44px rgba(15, 23, 42, .09);
+      --header-height: 56px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100dvh;
+      overflow-x: clip;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 84% 7%, rgba(202, 226, 255, .45), transparent 24rem),
+        var(--page);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      font-variant-numeric: tabular-nums;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid rgba(0, 122, 255, .32); outline-offset: 3px; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--header-height);
+      padding: 12px 20px;
+      background: #fff;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .05), 0 8px 20px rgba(15, 23, 42, .04);
+    }
+    .header-inner {
+      width: min(100%, 1120px);
+      height: 32px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { width: 137px; height: 44px; display: flex; align-items: center; }
+    .brand svg { width: 117.133px; height: 24px; }
+    .download-link {
+      min-height: 44px;
+      padding: 6px 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      color: #fff;
+      background: #000;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: -.01em;
+    }
+
+    .shell { width: min(100% - 32px, 1120px); margin-inline: auto; }
+    .intro { padding: 32px 0 20px; }
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--accent);
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(28px, 8vw, 60px);
+      line-height: .98;
+      letter-spacing: -.055em;
+      text-wrap: balance;
+    }
+    .intro-copy {
+      max-width: 690px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: clamp(16px, 2.4vw, 20px);
+      line-height: 1.42;
+      letter-spacing: -.015em;
+    }
+
+    .tabs-dock {
+      position: sticky;
+      top: var(--header-height);
+      z-index: 40;
+      padding: 8px 0 10px;
+      background: linear-gradient(var(--page) 68%, rgba(242, 245, 249, 0));
+    }
+    .tabs {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      min-height: 52px;
+      padding: 4px;
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 999px;
+      background: rgba(246, 249, 253, .7);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, .08), inset 0 0 0 1px rgba(15, 23, 42, .035);
+      isolation: isolate;
+      -webkit-backdrop-filter: blur(24px) saturate(150%);
+      backdrop-filter: blur(24px) saturate(150%);
+    }
+    .tab-indicator {
+      position: absolute;
+      z-index: -1;
+      inset: 4px auto 4px 4px;
+      width: calc((100% - 8px) / 4);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .94);
+      box-shadow: 0 3px 12px rgba(15, 23, 42, .12), inset 0 0 0 1px rgba(255, 255, 255, .9);
+      transform: translateX(0);
+      transition: transform .34s cubic-bezier(.2, .8, .2, 1);
+    }
+    .tab {
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 5px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: #667085;
+      font-size: clamp(12px, 3.4vw, 15px);
+      font-weight: 650;
+      letter-spacing: -.015em;
+      cursor: pointer;
+    }
+    .tab[aria-selected="true"] { color: var(--ink); }
+
+    main { padding: 8px 0 calc(48px + env(safe-area-inset-bottom)); }
+    .panel[hidden] { display: none; }
+    .calculator-layout { display: grid; gap: 14px; }
+    .result-field {
+      position: relative;
+      min-height: 252px;
+      padding: 13px;
+      overflow: hidden;
+      border-radius: 32px;
+      background:
+        radial-gradient(circle at 84% 12%, rgba(255, 255, 255, .92), transparent 12rem),
+        linear-gradient(145deg, #d8ebff 0%, #c4e1ff 50%, #d9eeff 100%);
+      box-shadow: var(--shadow);
+    }
+    .result-field::before {
+      content: "";
+      position: absolute;
+      right: -82px;
+      bottom: -110px;
+      width: 250px;
+      height: 250px;
+      border: 1px solid rgba(0, 122, 255, .13);
+      border-radius: 50%;
+      box-shadow: 0 0 0 32px rgba(255, 255, 255, .12), 0 0 0 64px rgba(255, 255, 255, .08);
+    }
+    .result-card {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      min-height: 226px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid rgba(255, 255, 255, .75);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, .58);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .72);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      backdrop-filter: blur(20px) saturate(150%);
+    }
+    .result-label {
+      margin: 0 0 7px;
+      color: #3b5f82;
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .payment-value {
+      margin: 0;
+      font-size: clamp(42px, 12vw, 64px);
+      line-height: .98;
+      font-weight: 720;
+      letter-spacing: -.06em;
+      white-space: nowrap;
+    }
+    .payment-value small { font-size: .42em; letter-spacing: -.03em; }
+    .result-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 28px 0 0;
+    }
+    .metric { min-width: 0; }
+    .metric + .metric { padding-left: 16px; border-left: 1px solid rgba(33, 75, 116, .14); }
+    .metric dt { margin: 0 0 5px; color: #58728d; font-size: 13px; line-height: 1.2; }
+    .metric dd { margin: 0; font-size: clamp(18px, 5vw, 23px); font-weight: 690; letter-spacing: -.035em; white-space: nowrap; }
+
+    .parameters { display: grid; gap: 14px; }
+    .amount-block {
+      padding: 23px 22px 20px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(251, 252, 254, .92);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+    }
+    .block-label { display: block; margin: 0 0 13px; color: var(--muted); font-size: 14px; font-weight: 650; }
+    .amount-row { display: flex; align-items: baseline; gap: 7px; }
+    .amount-input {
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: clamp(31px, 9vw, 45px);
+      line-height: 1;
+      font-weight: 710;
+      letter-spacing: -.055em;
+    }
+    .amount-input[aria-invalid="true"] { color: #c62828; }
+    .amount-error { min-height: 17px; margin: 7px 0 -2px; color: #c62828; font-size: 12px; }
+    .amount-unit { color: #69768a; font-size: 22px; font-weight: 650; }
+    .range {
+      --progress: 22%;
+      width: 100%;
+      height: 34px;
+      margin: 17px 0 0;
+      padding: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .range::-webkit-slider-runnable-track { height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--accent) var(--progress), #dbe3ed var(--progress)); }
+    .range::-moz-range-track { height: 8px; border-radius: 99px; background: #dbe3ed; }
+    .range::-moz-range-progress { height: 8px; border-radius: 99px; background: var(--accent); }
+    .range::-webkit-slider-thumb {
+      width: 28px;
+      height: 28px;
+      margin-top: -10px;
+      border: 4px solid #fff;
+      border-radius: 50%;
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--accent);
+      box-shadow: 0 3px 10px rgba(15, 23, 42, .22);
+    }
+    .range::-moz-range-thumb { width: 20px; height: 20px; border: 4px solid #fff; border-radius: 50%; background: var(--accent); box-shadow: 0 3px 10px rgba(15, 23, 42, .22); }
+    .range-ends { display: flex; justify-content: space-between; margin-top: -2px; color: #69768a; font-size: 13px; }
+    .parameter-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .parameter-card {
+      width: 100%;
+      min-height: 112px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(251, 252, 254, .92);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, .055);
+      text-align: left;
+      cursor: pointer;
+    }
+    .card-top { width: 100%; display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 14px; font-weight: 650; }
+    .chevron { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: var(--accent); background: #eaf4ff; font-size: 18px; }
+    .card-value { font-size: clamp(23px, 6vw, 31px); font-weight: 700; letter-spacing: -.04em; }
+
+    .empty-panel {
+      min-height: 280px;
+      padding: 42px 28px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed rgba(70, 91, 118, .2);
+      border-radius: 28px;
+      color: #7b8798;
+      background: rgba(255, 255, 255, .34);
+      text-align: center;
+    }
+    .empty-panel p { max-width: 300px; margin: 0; font-size: 16px; line-height: 1.45; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .value-flash { animation: value-flash .2s ease-out; }
+    @keyframes value-flash { from { opacity: .42; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+    .editor-layer {
+      position: fixed;
+      z-index: 80;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .editor-layer[hidden] { display: none; }
+    .editor-backdrop {
+      position: absolute;
+      inset: 0;
+      border: 0;
+      background: rgba(11, 20, 33, .24);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      animation: fade-in .18s ease-out both;
+    }
+    .editor-dialog {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: min(58dvh, 540px);
+      min-height: 430px;
+      padding: 10px 20px calc(22px + env(safe-area-inset-bottom));
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, .78);
+      border-radius: 30px 30px 0 0;
+      background: rgba(249, 251, 254, .9);
+      box-shadow: 0 -16px 50px rgba(15, 23, 42, .18);
+      -webkit-backdrop-filter: blur(28px) saturate(150%);
+      backdrop-filter: blur(28px) saturate(150%);
+      animation: sheet-in .34s cubic-bezier(.16, 1, .3, 1) both;
+      touch-action: pan-y;
+    }
+    .grabber {
+      width: 42px;
+      height: 5px;
+      margin: 0 auto 7px;
+      border-radius: 99px;
+      background: #c7d0dc;
+    }
+    .editor-head { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 16px; }
+    .editor-title { margin: 0; font-size: 17px; font-weight: 690; letter-spacing: -.025em; }
+    .done-button {
+      min-width: 74px;
+      min-height: 44px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--accent);
+      font-weight: 690;
+      cursor: pointer;
+    }
+    .editor-modes {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      margin: 12px 0 20px;
+      padding: 3px;
+      border-radius: 13px;
+      background: #e9eef5;
+    }
+    .editor-modes[hidden] { display: none; }
+    .mode-button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 10px;
+      color: #687487;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .mode-button[aria-pressed="true"] { color: var(--ink); background: #fff; box-shadow: 0 2px 7px rgba(15, 23, 42, .11); }
+    .editor-value-row { display: flex; align-items: baseline; gap: 8px; margin-top: 17px; }
+    .editor-input {
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: clamp(38px, 12vw, 54px);
+      line-height: 1.08;
+      font-weight: 720;
+      letter-spacing: -.055em;
+    }
+    .editor-input[aria-invalid="true"] { border-bottom-color: #df3b3b; }
+    .editor-unit { color: #69768a; font-size: 21px; font-weight: 650; white-space: nowrap; }
+    .editor-error { min-height: 18px; margin: 5px 0 0; color: #c62828; font-size: 13px; }
+    .quick-values { display: flex; gap: 8px; margin: 14px -2px 2px; padding: 2px; overflow-x: auto; scrollbar-width: none; }
+    .quick-values::-webkit-scrollbar { display: none; }
+    .quick-button {
+      min-height: 44px;
+      padding: 0 15px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 999px;
+      color: #344154;
+      background: rgba(255, 255, 255, .72);
+      font-size: 14px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .quick-button[aria-pressed="true"] { color: #fff; border-color: var(--accent); background: var(--accent); }
+    .editor-range { margin-top: 13px; }
+    .editor-hint { margin: 12px 0 0; color: #7b8798; font-size: 13px; line-height: 1.35; }
+    @keyframes fade-in { from { opacity: 0; } }
+    @keyframes sheet-in { from { transform: translateY(105%); } }
+
+    @media (min-width: 720px) {
+      .shell { width: min(100% - 56px, 1120px); }
+      .intro { padding: 48px 0 28px; }
+      .tabs-dock { padding-block: 10px 14px; }
+      .tabs { width: min(100%, 620px); }
+      main { padding-top: 14px; }
+      .calculator-layout {
+        grid-template-columns: minmax(0, .92fr) minmax(360px, 1.08fr);
+        grid-template-areas: "params result";
+        align-items: stretch;
+        gap: 18px;
+      }
+      .result-field { grid-area: result; min-height: 420px; }
+      .result-card { min-height: 394px; padding: 32px; }
+      .parameters { grid-area: params; }
+      .amount-block { min-height: 230px; padding: 28px; }
+      .parameter-card { min-height: 172px; padding: 23px; }
+      .result-metrics { gap: 24px; }
+      .editor-layer { align-items: flex-start; justify-content: flex-start; }
+      .editor-layer.is-popover .editor-backdrop { background: rgba(11, 20, 33, .06); -webkit-backdrop-filter: none; backdrop-filter: none; }
+      .editor-layer.is-popover .editor-dialog {
+        position: fixed;
+        left: var(--popover-left, 24px);
+        top: var(--popover-top, 120px);
+        width: 370px;
+        height: auto;
+        min-height: 0;
+        max-height: min(590px, calc(100dvh - 32px));
+        padding: 13px 22px 24px;
+        border-radius: 28px;
+        box-shadow: 0 22px 70px rgba(15, 23, 42, .2);
+        animation-name: popover-in;
+        transform-origin: 18% 12%;
+      }
+      .editor-layer.is-popover .grabber { display: none; }
+      .editor-layer.is-popover .quick-values {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        overflow: visible;
+      }
+      .editor-layer.is-popover .quick-button { width: 100%; padding-inline: 8px; }
+      @keyframes popover-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+    }
+
+    @media (max-width: 350px) {
+      h1 { font-size: 25px; }
+      .shell { width: min(100% - 28px, 1120px); }
+    }
+
+    @media (min-width: 980px) {
+      .intro { padding-top: 56px; }
+      .calculator-layout { grid-template-columns: minmax(0, .88fr) minmax(470px, 1.12fr); gap: 22px; }
+    }
+
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .tabs { background: #f8fafc; }
+      .result-card { background: #f4f9ff; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <nav class="header-inner" aria-label="Основная навигация">
+      <a class="brand" href="https://zplatka.ru/" aria-label="Заплатка - на главную">
+        <svg xmlns="http://www.w3.org/2000/svg" width="117.133" height="24" fill="none" overflow="visible" preserveAspectRatio="none" style="display:block" viewBox="0 0 117.133 24" aria-hidden="true"><rect width="24" height="24" fill="#007AFF" rx="8"></rect><path fill="#fff" d="m20 9.513-3.518 3.492 3.518 1.8L14.769 20 4 14.487l2.796-2.776 5.298 2.678.698-.695L4 9.194 9.231 4z"></path><g fill="#000"><path d="M30 14.33h2.933q.021.54.483.852t1.193.312q.74 0 1.243-.34.504-.349.505-.995 0-.398-.2-.689a1.35 1.35 0 0 0-.553-.469 1.9 1.9 0 0 0-.824-.17h-1.57v-1.982h1.57q.703 0 1.08-.326.383-.327.383-.817 0-.554-.398-.888-.39-.34-1.058-.34-.675 0-1.122.305-.44.299-.455.78h-2.919q.015-.978.59-1.697.582-.717 1.562-1.107.988-.39 2.209-.391 1.335 0 2.301.376.973.37 1.492 1.059.525.689.525 1.64 0 .866-.568 1.449-.57.582-1.59.831v.114q.674.042 1.22.362.547.32.874.88.327.555.327 1.314 0 1.016-.597 1.74-.59.725-1.633 1.116-1.036.383-2.38.383-1.306 0-2.343-.376-1.03-.384-1.64-1.122-.604-.739-.64-1.805M43.8 17.625q-1.045 0-1.862-.362a3 3 0 0 1-1.292-1.087q-.47-.724-.469-1.804 0-.909.334-1.527a2.7 2.7 0 0 1 .909-.994q.576-.376 1.307-.568a10 10 0 0 1 1.548-.27 39 39 0 0 0 1.534-.185q.582-.091.845-.27.263-.177.263-.525V9.99q0-.675-.426-1.044-.42-.37-1.193-.37-.817 0-1.3.363a1.67 1.67 0 0 0-.64.895l-2.797-.227a3.8 3.8 0 0 1 .838-1.72q.625-.73 1.612-1.121.994-.399 2.301-.398a7 7 0 0 1 1.74.213 4.6 4.6 0 0 1 1.484.66 3.2 3.2 0 0 1 1.03 1.151q.377.695.377 1.67v7.357h-2.87v-1.513h-.085q-.263.512-.703.902a3.3 3.3 0 0 1-1.058.604q-.618.213-1.428.213m.866-2.088q.667 0 1.179-.263.51-.27.802-.724.291-.455.291-1.03v-1.158a1.6 1.6 0 0 1-.39.17 7 7 0 0 1-.547.136 27 27 0 0 1-.61.106l-.555.078a3.7 3.7 0 0 0-.93.249 1.5 1.5 0 0 0-.618.461q-.22.285-.22.71 0 .619.447.945.455.32 1.15.32M51.89 17.419V6.509h9.538v10.91h-2.89v-8.53h-3.793v8.53zM62.804 17.419l-.014-2.4h.362q.384 0 .66-.185.285-.192.47-.618.184-.426.29-1.13.107-.71.142-1.747l.178-4.83h8.295v10.91h-2.883v-8.53h-2.692l-.17 3.331q-.064 1.371-.334 2.358-.263.987-.732 1.62a2.9 2.9 0 0 1-1.129.923q-.66.298-1.534.298zM78.244 17.625q-1.044 0-1.861-.362a3 3 0 0 1-1.293-1.087q-.468-.724-.468-1.804 0-.909.333-1.527.334-.618.91-.994.575-.376 1.306-.568a10 10 0 0 1 1.549-.27 39 39 0 0 0 1.534-.185q.582-.091.845-.27.263-.177.263-.525V9.99q0-.675-.426-1.044-.42-.37-1.194-.37-.816 0-1.3.363a1.67 1.67 0 0 0-.639.895l-2.798-.227a3.8 3.8 0 0 1 .838-1.72q.625-.73 1.612-1.121.994-.399 2.302-.398a7 7 0 0 1 1.74.213 4.6 4.6 0 0 1 1.484.66 3.2 3.2 0 0 1 1.03 1.151q.376.695.376 1.67v7.357h-2.87v-1.513h-.084q-.263.512-.704.902a3.3 3.3 0 0 1-1.058.604q-.618.213-1.427.213m.866-2.088q.667 0 1.18-.263.51-.27.802-.724.291-.455.291-1.03v-1.158a1.6 1.6 0 0 1-.39.17 7 7 0 0 1-.547.136 27 27 0 0 1-.611.106l-.554.078a3.7 3.7 0 0 0-.93.249 1.5 1.5 0 0 0-.619.461q-.22.285-.22.71 0 .619.448.945.454.32 1.15.32M85.239 8.89V6.51h9.886v2.38H91.61v8.529h-2.884v-8.53zM96.56 17.419V6.509h3.025v4.234h.852l2.969-4.233h3.551l-3.856 5.412L107 17.419h-3.594l-2.692-3.87h-1.129v3.87zM110.989 17.625q-1.044 0-1.861-.362a3 3 0 0 1-1.292-1.087q-.47-.724-.469-1.804 0-.909.334-1.527.333-.618.909-.994.575-.376 1.307-.568a10 10 0 0 1 1.548-.27 39 39 0 0 0 1.534-.185q.582-.091.845-.27.263-.177.263-.525V9.99q0-.675-.426-1.044-.42-.37-1.193-.37-.817 0-1.3.363a1.67 1.67 0 0 0-.639.895l-2.799-.227a3.8 3.8 0 0 1 .838-1.72q.626-.73 1.613-1.121.995-.399 2.301-.398a7 7 0 0 1 1.74.213 4.6 4.6 0 0 1 1.484.66q.654.448 1.03 1.151.377.695.377 1.67v7.357h-2.87v-1.513h-.085q-.263.512-.703.902a3.3 3.3 0 0 1-1.058.604q-.618.213-1.428.213m.867-2.088q.667 0 1.179-.263.51-.27.802-.724.291-.455.291-1.03v-1.158a1.6 1.6 0 0 1-.39.17 7 7 0 0 1-.547.136q-.305.057-.611.106l-.554.078a3.7 3.7 0 0 0-.93.249 1.5 1.5 0 0 0-.618.461q-.22.285-.22.71 0 .619.447.945.455.32 1.151.32"></path></g></svg>
+      </a>
+      <a class="download-link" href="https://zplatka.ru/#download">Скачать</a>
+    </nav>
+  </header>
+
+  <section class="intro shell" aria-labelledby="page-title">
+    <p class="eyebrow">Личный расчёт</p>
+    <h1 id="page-title">Кредитный калькулятор без догадок</h1>
+    <p class="intro-copy">Платёж, переплата, график и все сценарии погашения в одном рабочем пространстве.</p>
+  </section>
+
+  <div class="tabs-dock">
+    <div class="shell">
+      <div class="tabs" role="tablist" aria-label="Разделы калькулятора">
+        <span class="tab-indicator" aria-hidden="true"></span>
+        <button class="tab" id="tab-pick" type="button" role="tab" aria-selected="true" aria-controls="panel-pick" data-tab="0">Подбор</button>
+        <button class="tab" id="tab-details" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="panel-details" data-tab="1">Детали</button>
+        <button class="tab" id="tab-payment" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="panel-payment" data-tab="2">Платёж</button>
+        <button class="tab" id="tab-return" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="panel-return" data-tab="3">Возврат</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="shell">
+    <section class="panel" id="panel-pick" role="tabpanel" aria-labelledby="tab-pick">
+      <div class="calculator-layout">
+        <section class="result-field" aria-label="Результат расчёта">
+          <div class="result-card">
+            <div>
+              <p class="result-label">Платёж в месяц</p>
+              <p class="payment-value" id="payment-value" aria-live="polite">46 140 <small>₽</small></p>
+            </div>
+            <dl class="result-metrics">
+              <div class="metric"><dt>Переплата</dt><dd id="overpayment-value">461 023 ₽</dd></div>
+              <div class="metric"><dt>Всего вернуть</dt><dd id="total-value">1 661 023 ₽</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <div class="parameters">
+          <section class="amount-block" aria-labelledby="amount-label">
+            <label class="block-label" id="amount-label" for="amount-input">Сумма кредита</label>
+            <div class="amount-row">
+              <input class="amount-input" id="amount-input" type="text" inputmode="numeric" value="1 200 000" aria-describedby="amount-range-hint amount-error">
+              <span class="amount-unit">₽</span>
+            </div>
+            <p class="amount-error" id="amount-error" aria-live="polite"></p>
+            <input class="range" id="amount-range" type="range" min="5000" max="30000000" step="1000" value="1200000" aria-label="Сумма кредита">
+            <div class="range-ends" id="amount-range-hint"><span>5 тыс.</span><span>30 млн</span></div>
+          </section>
+
+          <div class="parameter-pair">
+            <button class="parameter-card" id="term-card" type="button" aria-haspopup="dialog">
+              <span class="card-top"><span>Срок</span><span class="chevron" aria-hidden="true">›</span></span>
+              <span class="card-value" id="term-value">36 месяцев</span>
+            </button>
+            <button class="parameter-card" id="rate-card" type="button" aria-haspopup="dialog">
+              <span class="card-top"><span>Ставка</span><span class="chevron" aria-hidden="true">›</span></span>
+              <span class="card-value" id="rate-value">22,5 %</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-details" role="tabpanel" aria-labelledby="tab-details" hidden><div class="empty-panel"><p>Здесь появятся детали кредита. Раздел подготовлен для следующего этапа.</p></div></section>
+    <section class="panel" id="panel-payment" role="tabpanel" aria-labelledby="tab-payment" hidden><div class="empty-panel"><p>Здесь появятся сценарии платежей. Раздел подготовлен для следующего этапа.</p></div></section>
+    <section class="panel" id="panel-return" role="tabpanel" aria-labelledby="tab-return" hidden><div class="empty-panel"><p>Здесь появятся сценарии возврата. Раздел подготовлен для следующего этапа.</p></div></section>
+  </main>
+
+  <p class="sr-only" id="calc-status" aria-live="polite"></p>
+  <div class="editor-layer" id="editor-layer" hidden>
+    <button class="editor-backdrop" id="editor-backdrop" type="button" tabindex="-1" aria-label="Закрыть панель"></button>
+    <section class="editor-dialog" id="editor-dialog" role="dialog" aria-modal="true" aria-labelledby="editor-title" tabindex="-1">
+      <div class="grabber" aria-hidden="true"></div>
+      <header class="editor-head">
+        <h2 class="editor-title" id="editor-title">Срок кредита</h2>
+        <button class="done-button" id="editor-done" type="button">Готово</button>
+      </header>
+      <div class="editor-modes" id="editor-modes" aria-label="Способ ввода" hidden>
+        <button class="mode-button" type="button" data-mode="rate" aria-pressed="true">Ставка</button>
+        <button class="mode-button" type="button" data-mode="overpayment" aria-pressed="false">Переплата</button>
+      </div>
+      <div class="editor-value-row">
+        <input class="editor-input" id="editor-input" type="text" inputmode="decimal" autocomplete="off" aria-describedby="editor-error editor-hint">
+        <span class="editor-unit" id="editor-unit">мес.</span>
+      </div>
+      <p class="editor-error" id="editor-error" aria-live="polite"></p>
+      <div class="quick-values" id="quick-values" aria-label="Быстрые значения"></div>
+      <input class="range editor-range" id="editor-range" type="range" aria-label="Значение параметра">
+      <div class="range-ends" id="editor-range-ends"><span></span><span></span></div>
+      <p class="editor-hint" id="editor-hint"></p>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const limits = {
+        amount: { min: 5000, max: 30000000, step: 1000 },
+        term: { min: 1, max: 240, step: 1 },
+        rate: { min: 1, max: 60, step: 0.1 }
+      };
+      const params = new URLSearchParams(location.search);
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+      const snap = (value, step) => Math.round(value / step) * step;
+      const readParam = (name, fallback, spec) => {
+        const raw = params.get(name);
+        if (raw === null || raw.trim() === "") return fallback;
+        const value = Number(raw.replace(",", "."));
+        return Number.isFinite(value) ? clamp(snap(value, spec.step), spec.min, spec.max) : fallback;
+      };
+      const state = {
+        amount: readParam("amount", 1200000, limits.amount),
+        term: readParam("term", 36, limits.term),
+        rate: readParam("rate", 22.5, limits.rate),
+        mode: params.get("mode") === "overpayment" ? "overpayment" : "rate"
+      };
+
+      const els = {
+        amountInput: document.querySelector("#amount-input"),
+        amountError: document.querySelector("#amount-error"),
+        amountRange: document.querySelector("#amount-range"),
+        payment: document.querySelector("#payment-value"),
+        overpayment: document.querySelector("#overpayment-value"),
+        total: document.querySelector("#total-value"),
+        termValue: document.querySelector("#term-value"),
+        rateValue: document.querySelector("#rate-value"),
+        termCard: document.querySelector("#term-card"),
+        rateCard: document.querySelector("#rate-card"),
+        status: document.querySelector("#calc-status"),
+        layer: document.querySelector("#editor-layer"),
+        dialog: document.querySelector("#editor-dialog"),
+        backdrop: document.querySelector("#editor-backdrop"),
+        done: document.querySelector("#editor-done"),
+        title: document.querySelector("#editor-title"),
+        modes: document.querySelector("#editor-modes"),
+        input: document.querySelector("#editor-input"),
+        unit: document.querySelector("#editor-unit"),
+        error: document.querySelector("#editor-error"),
+        quick: document.querySelector("#quick-values"),
+        range: document.querySelector("#editor-range"),
+        rangeEnds: document.querySelector("#editor-range-ends"),
+        hint: document.querySelector("#editor-hint")
+      };
+      let activeEditor = null;
+      let returnFocus = null;
+      let announceTimer = 0;
+
+      const formatMoney = value => Math.round(value).toLocaleString("ru-RU");
+      const formatRate = value => value.toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+      const monthWord = value => {
+        const mod100 = value % 100;
+        const mod10 = value % 10;
+        if (mod100 >= 11 && mod100 <= 14) return "месяцев";
+        if (mod10 === 1) return "месяц";
+        if (mod10 >= 2 && mod10 <= 4) return "месяца";
+        return "месяцев";
+      };
+      const parseLoose = value => {
+        const normalized = String(value).replace(/[\s\u00a0\u202f]/g, "").replace(",", ".").replace(/[^0-9.]/g, "");
+        if (!normalized || normalized === ".") return NaN;
+        return Number(normalized);
+      };
+      const calculate = (amount, term, annualRate) => {
+        const monthlyRate = annualRate / 1200;
+        const payment = monthlyRate <= 0
+          ? amount / term
+          : amount * monthlyRate * Math.pow(1 + monthlyRate, term) / (Math.pow(1 + monthlyRate, term) - 1);
+        const total = payment * term;
+        return { payment, total, overpayment: total - amount };
+      };
+      const solveRate = (amount, term, targetOverpayment) => {
+        let low = 0;
+        let high = 60;
+        for (let index = 0; index < 70; index += 1) {
+          const middle = (low + high) / 2;
+          if (calculate(amount, term, middle).overpayment < targetOverpayment) low = middle;
+          else high = middle;
+        }
+        return (low + high) / 2;
+      };
+      const rangeProgress = element => {
+        const min = Number(element.min);
+        const max = Number(element.max);
+        const value = Number(element.value);
+        element.style.setProperty("--progress", `${(value - min) / (max - min) * 100}%`);
+      };
+      const flash = elements => {
+        elements.forEach(element => {
+          element.classList.remove("value-flash");
+          void element.offsetWidth;
+          element.classList.add("value-flash");
+        });
+      };
+      const updateUrl = () => {
+        const url = new URL(location.href);
+        url.searchParams.set("amount", String(Math.round(state.amount)));
+        url.searchParams.set("term", String(Math.round(state.term)));
+        url.searchParams.set("rate", String(Math.round(state.rate * 1000) / 1000));
+        url.searchParams.set("mode", state.mode);
+        try { history.replaceState(null, "", url.href); } catch (_) { /* file URLs may restrict history writes */ }
+      };
+      const render = ({ animate = true, announce = false } = {}) => {
+        const result = calculate(state.amount, state.term, state.rate);
+        if (document.activeElement !== els.amountInput) els.amountInput.value = formatMoney(state.amount);
+        els.amountRange.value = String(state.amount);
+        rangeProgress(els.amountRange);
+        els.payment.innerHTML = `${formatMoney(result.payment)} <small>₽</small>`;
+        els.overpayment.textContent = `${formatMoney(result.overpayment)} ₽`;
+        els.total.textContent = `${formatMoney(result.total)} ₽`;
+        els.termValue.textContent = `${state.term} ${monthWord(state.term)}`;
+        els.rateValue.textContent = `${formatRate(state.rate)} %`;
+        if (animate) flash([els.payment, els.overpayment, els.total]);
+        if (announce) {
+          clearTimeout(announceTimer);
+          announceTimer = setTimeout(() => {
+            els.status.textContent = `Платёж ${formatMoney(result.payment)} рублей в месяц, переплата ${formatMoney(result.overpayment)} рублей`;
+          }, 300);
+        }
+        updateUrl();
+        return result;
+      };
+
+      const amountFromInput = (commit = false) => {
+        const parsed = parseLoose(els.amountInput.value);
+        if (!Number.isFinite(parsed)) {
+          els.amountInput.setAttribute("aria-invalid", "true");
+          els.amountError.textContent = "Введите сумму кредита";
+          if (commit) {
+            els.amountInput.value = formatMoney(state.amount);
+            els.amountInput.removeAttribute("aria-invalid");
+            els.amountError.textContent = "";
+          }
+          return;
+        }
+        els.amountInput.removeAttribute("aria-invalid");
+        const nextAmount = clamp(snap(parsed, limits.amount.step), limits.amount.min, limits.amount.max);
+        els.amountError.textContent = parsed !== nextAmount ? "Допустимая сумма: от 5 тыс. до 30 млн ₽" : "";
+        state.amount = nextAmount;
+        if (commit) els.amountInput.value = formatMoney(state.amount);
+        render({ announce: commit });
+        if (activeEditor === "overpayment") configureEditor("overpayment");
+      };
+
+      els.amountInput.addEventListener("input", () => amountFromInput(false));
+      els.amountInput.addEventListener("blur", () => amountFromInput(true));
+      els.amountInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") { event.preventDefault(); amountFromInput(true); els.amountInput.blur(); }
+      });
+      els.amountRange.addEventListener("input", () => {
+        state.amount = Number(els.amountRange.value);
+        render({ announce: false });
+      });
+      els.amountRange.addEventListener("change", () => render({ announce: true }));
+
+      const editorSpec = kind => {
+        if (kind === "term") return {
+          title: "Срок кредита", unit: "мес.", min: 1, max: 240, step: 1,
+          value: state.term, decimals: 0, quick: [12, 24, 36, 60, 120],
+          minLabel: "1 месяц", maxLabel: "20 лет", hint: "Можно выбрать от 1 до 240 месяцев."
+        };
+        if (kind === "overpayment") return {
+          title: "Укажите переплату", unit: "₽", min: 1000, max: state.amount, step: 1000,
+          value: calculate(state.amount, state.term, state.rate).overpayment, decimals: 0,
+          quick: [100000, 250000, 500000, state.amount].map(value => clamp(snap(value, 1000), 1000, state.amount)).filter((value, index, array) => array.indexOf(value) === index),
+          minLabel: "1 тыс.", maxLabel: formatMoney(state.amount), hint: "Ставка подберётся автоматически под выбранную переплату."
+        };
+        return {
+          title: "Процентная ставка", unit: "%", min: 1, max: 60, step: 0.1,
+          value: state.rate, decimals: 1, quick: [12, 18, 22.5, 30, 40],
+          minLabel: "1 %", maxLabel: "60 %", hint: "Укажите годовую процентную ставку."
+        };
+      };
+      const editorDisplay = (value, kind) => kind === "rate" ? formatRate(value) : formatMoney(value);
+      const quickDisplay = (value, kind) => {
+        if (kind === "term") return `${value} мес.`;
+        if (kind === "rate") return `${formatRate(value)} %`;
+        if (value >= 1000000) return `${(value / 1000000).toLocaleString("ru-RU", { maximumFractionDigits: 1 })} млн ₽`;
+        return `${Math.round(value / 1000)} тыс. ₽`;
+      };
+      const configureEditor = kind => {
+        activeEditor = kind;
+        const spec = editorSpec(kind);
+        els.title.textContent = spec.title;
+        els.unit.textContent = spec.unit;
+        els.input.value = editorDisplay(spec.value, kind);
+        els.input.inputMode = kind === "rate" ? "decimal" : "numeric";
+        els.input.removeAttribute("aria-invalid");
+        els.error.textContent = "";
+        els.hint.textContent = spec.hint;
+        els.range.min = String(spec.min);
+        els.range.max = String(spec.max);
+        els.range.step = String(spec.step);
+        els.range.value = String(clamp(spec.value, spec.min, spec.max));
+        els.rangeEnds.children[0].textContent = spec.minLabel;
+        els.rangeEnds.children[1].textContent = spec.maxLabel;
+        rangeProgress(els.range);
+        els.modes.hidden = kind === "term";
+        els.modes.querySelectorAll(".mode-button").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === state.mode)));
+        els.quick.replaceChildren(...spec.quick.map(value => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "quick-button";
+          button.dataset.value = String(value);
+          button.textContent = quickDisplay(value, kind);
+          button.setAttribute("aria-pressed", String(Math.abs(value - spec.value) < spec.step / 2));
+          return button;
+        }));
+      };
+      const positionPopover = trigger => {
+        const rect = trigger.getBoundingClientRect();
+        const width = 370;
+        const left = clamp(rect.right + 14, 18, innerWidth - width - 18);
+        const top = clamp(rect.top - 18, 70, innerHeight - 510);
+        els.layer.style.setProperty("--popover-left", `${left}px`);
+        els.layer.style.setProperty("--popover-top", `${top}px`);
+      };
+      const openEditor = (kind, trigger) => {
+        returnFocus = trigger;
+        const resolvedKind = kind === "rate" ? state.mode : kind;
+        configureEditor(resolvedKind);
+        const popover = matchMedia("(min-width: 720px)").matches;
+        els.layer.classList.toggle("is-popover", popover);
+        if (popover) positionPopover(trigger);
+        els.layer.hidden = false;
+        document.body.style.overflow = "hidden";
+        requestAnimationFrame(() => { els.input.focus(); els.input.select(); });
+      };
+      const closeEditor = () => {
+        if (els.layer.hidden) return;
+        commitEditorValue(true);
+        els.layer.hidden = true;
+        els.layer.classList.remove("is-popover");
+        els.dialog.style.transform = "";
+        document.body.style.overflow = "";
+        const focusTarget = returnFocus;
+        returnFocus = null;
+        activeEditor = null;
+        if (focusTarget) focusTarget.focus();
+      };
+      const commitEditorValue = (final = false) => {
+        if (!activeEditor) return false;
+        const spec = editorSpec(activeEditor);
+        const parsed = parseLoose(els.input.value);
+        if (!Number.isFinite(parsed)) {
+          els.input.setAttribute("aria-invalid", "true");
+          els.error.textContent = "Введите число";
+          if (final) {
+            els.input.value = editorDisplay(spec.value, activeEditor);
+            els.input.removeAttribute("aria-invalid");
+            els.error.textContent = "";
+          }
+          return false;
+        }
+        const value = clamp(snap(parsed, spec.step), spec.min, spec.max);
+        els.input.removeAttribute("aria-invalid");
+        els.error.textContent = parsed !== value ? `Значение ограничено диапазоном ${spec.minLabel} - ${spec.maxLabel}` : "";
+        if (activeEditor === "term") state.term = Math.round(value);
+        else if (activeEditor === "rate") state.rate = value;
+        else state.rate = solveRate(state.amount, state.term, value);
+        els.range.value = String(value);
+        rangeProgress(els.range);
+        if (final) els.input.value = editorDisplay(value, activeEditor);
+        render({ announce: final });
+        return true;
+      };
+
+      els.termCard.addEventListener("click", () => openEditor("term", els.termCard));
+      els.rateCard.addEventListener("click", () => openEditor("rate", els.rateCard));
+      els.done.addEventListener("click", closeEditor);
+      els.backdrop.addEventListener("click", closeEditor);
+      els.input.addEventListener("input", () => commitEditorValue(false));
+      els.input.addEventListener("blur", () => { if (!els.layer.hidden) commitEditorValue(true); });
+      els.input.addEventListener("keydown", event => {
+        if (event.key === "Enter") { event.preventDefault(); commitEditorValue(true); }
+      });
+      els.range.addEventListener("input", () => {
+        els.input.value = editorDisplay(Number(els.range.value), activeEditor);
+        commitEditorValue(false);
+      });
+      els.range.addEventListener("change", () => commitEditorValue(true));
+      els.quick.addEventListener("click", event => {
+        const button = event.target.closest("button[data-value]");
+        if (!button) return;
+        els.input.value = editorDisplay(Number(button.dataset.value), activeEditor);
+        commitEditorValue(true);
+        configureEditor(activeEditor);
+        els.input.focus();
+      });
+      els.modes.addEventListener("click", event => {
+        const button = event.target.closest("button[data-mode]");
+        if (!button || button.dataset.mode === state.mode) return;
+        state.mode = button.dataset.mode;
+        configureEditor(state.mode);
+        updateUrl();
+        els.input.focus();
+        els.input.select();
+      });
+
+      let dragStartY = null;
+      els.dialog.addEventListener("pointerdown", event => {
+        if (!els.layer.classList.contains("is-popover") && event.clientY - els.dialog.getBoundingClientRect().top < 64) dragStartY = event.clientY;
+      });
+      els.dialog.addEventListener("pointermove", event => {
+        if (dragStartY === null) return;
+        const distance = Math.max(0, event.clientY - dragStartY);
+        els.dialog.style.transform = `translateY(${distance}px)`;
+      });
+      const finishDrag = event => {
+        if (dragStartY === null) return;
+        const distance = Math.max(0, event.clientY - dragStartY);
+        dragStartY = null;
+        if (distance > 80) closeEditor();
+        else els.dialog.style.transform = "";
+      };
+      els.dialog.addEventListener("pointerup", finishDrag);
+      els.dialog.addEventListener("pointercancel", finishDrag);
+
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !els.layer.hidden) { event.preventDefault(); closeEditor(); return; }
+        if (event.key === "Tab" && !els.layer.hidden) {
+          const focusable = [...els.dialog.querySelectorAll("button:not([hidden]), input:not([hidden])")].filter(item => !item.disabled && item.offsetParent !== null);
+          if (!focusable.length) return;
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+          return;
+        }
+        if (!event.target.matches("[role='tab']")) return;
+        const tabs = [...document.querySelectorAll("[role='tab']")];
+        const current = tabs.indexOf(event.target);
+        let next = null;
+        if (event.key === "ArrowRight") next = (current + 1) % tabs.length;
+        if (event.key === "ArrowLeft") next = (current - 1 + tabs.length) % tabs.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = tabs.length - 1;
+        if (next !== null) { event.preventDefault(); tabs[next].focus(); tabs[next].click(); }
+      });
+
+      document.querySelector(".tabs").addEventListener("click", event => {
+        const tab = event.target.closest("[role='tab']");
+        if (!tab) return;
+        document.querySelectorAll("[role='tab']").forEach(item => {
+          const active = item === tab;
+          item.setAttribute("aria-selected", String(active));
+          item.tabIndex = active ? 0 : -1;
+          document.querySelector(`#${item.getAttribute("aria-controls")}`).hidden = !active;
+        });
+        document.querySelector(".tab-indicator").style.transform = `translateX(${Number(tab.dataset.tab) * 100}%)`;
+      });
+
+      render({ animate: false });
+    })();
+  </script>
+</body>
+</html>
