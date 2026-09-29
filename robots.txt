@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
-
+Disallow: /api/
+Disallow: /source/
+Disallow: /version.html
 Sitemap: https://zplatka.info/sitemap.xml
